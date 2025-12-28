@@ -1,29 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>家事集點 App</title>
+  
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <style>
     :root {
       --primary: #4e73df;
+      --bg: #f8f9fc;
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    /* 關鍵：強制手機瀏覽器不縮放文字 */
+    /* 防止手機瀏覽器自動縮放文字 */
     html { font-size: 16px; -webkit-text-size-adjust: 100%; }
 
     body { 
       height: 100vh; width: 100vw; margin: 0; padding: 0; 
-      background-color: #f8f9fc; overflow: hidden;
+      background-color: var(--bg); overflow: hidden;
       display: flex; flex-direction: column;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto;
+      user-select: none; -webkit-user-select: none;
     }
 
-    /* 頂部區域 */
+    /* 頂部區域 - 適配瀏海 */
     .app-header {
       padding: calc(var(--safe-top) + 20px) 20px 10px 20px;
       flex-shrink: 0;
@@ -37,17 +43,13 @@
 
     .display-pts { font-size: 2.2rem; font-weight: 800; line-height: 1.2; }
 
-    /* 標籤頁切換按鈕 */
-    .nav-pills .nav-link { font-weight: bold; padding: 10px; border-radius: 50px; }
-    .nav-pills .nav-link.active { background-color: var(--primary); }
-
-    /* 中間滑動內容 */
+    /* 中間滑動區域 */
     .app-body {
       flex-grow: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
-      padding: 10px 20px 120px 20px;
+      padding: 10px 20px 130px 20px;
     }
 
-    /* 家事按鈕：大格響應式 */
+    /* 大按鈕格狀佈局 (GitHub 響應式優化) */
     #itemContainer {
       display: grid;
       grid-template-columns: 1fr 1fr; /* 強制兩欄，確保按鈕夠大 */
@@ -58,7 +60,7 @@
       background: white; border: 2px solid #eaecf4; border-radius: 20px;
       padding: 20px 10px; font-size: 1.1rem; font-weight: 700;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      transition: 0.2s; min-height: 100px;
+      transition: 0.2s; min-height: 100px; text-align: center;
     }
 
     .selected { 
@@ -66,9 +68,10 @@
       color: white !important; 
       border-color: var(--primary) !important;
       box-shadow: 0 4px 10px rgba(78, 115, 223, 0.4);
+      transform: scale(0.96);
     }
 
-    /* 歷史紀錄明細 */
+    /* 紀錄清單樣式與銷帳刪除線 */
     .log-item {
       padding: 18px 0; border-bottom: 1px solid #e3e6f0;
       display: flex; justify-content: space-between; align-items: center;
@@ -77,7 +80,7 @@
     .text-spend { color: #e74a3b; font-weight: bold; }
     .text-gain { color: #1cc88a; font-weight: bold; }
 
-    /* 底部固定區域 */
+    /* 底部固定區域 - 適配導航條 */
     .app-footer {
       position: fixed; bottom: 0; width: 100%;
       padding: 15px 20px calc(20px + var(--safe-bottom)) 20px;
@@ -88,8 +91,10 @@
     .main-btn {
       width: 100%; border-radius: 50px; padding: 18px;
       font-weight: 800; font-size: 1.3rem; border: none;
+      background-color: var(--primary); color: white;
     }
 
+    /* 載入中遮罩 */
     #loading-overlay {
       position: fixed; top:0; left:0; width:100%; height:100%;
       background: rgba(255,255,255,0.9); z-index:9999;
@@ -115,8 +120,8 @@
     </div>
     
     <ul class="nav nav-pills nav-fill mt-3 bg-white rounded-pill p-1 shadow-sm">
-      <li class="nav-item"><a class="nav-link active" data-bs-toggle="pill" href="#tab-main">我要集點</a></li>
-      <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#tab-logs">查看明細</a></li>
+      <li class="nav-item"><a class="nav-link active rounded-pill" data-bs-toggle="pill" href="#tab-main">我要集點</a></li>
+      <li class="nav-item"><a class="nav-link rounded-pill" data-bs-toggle="pill" href="#tab-logs">查看明細</a></li>
     </ul>
   </div>
 
@@ -132,67 +137,115 @@
     </div>
   </div>
 
-  <div class="app-footer" id="footer-btn">
+  <div class="app-footer" id="footer-area">
     <button onclick="submitJob()" class="btn btn-primary main-btn shadow-lg">確認送出並儲存</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    let selectedItems = [];
-    
-    // 切換分頁邏輯
-    document.querySelectorAll('.nav-link').forEach(link => {
-      link.addEventListener('shown.bs.tab', (e) => {
-        document.getElementById('footer-btn').style.display = e.target.hash === '#tab-main' ? 'block' : 'none';
-      });
-    });
+    // ⚠️ 請將下方的網址替換為您 GAS 部署後的 Web App URL
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxPS0HBcTJO5F4q4FqN6wxXgFcun3lWhPKDSj7xk8moFM5_uTBrzbC-YaLXTiqkIDZV/exec";
 
-    function init() {
+    let selectedItems = [];
+
+    // 初始化：抓取資料
+    async function init() {
       toggleLoading(true);
-      google.script.run.withSuccessHandler(data => {
+      try {
+        const response = await fetch(GAS_URL);
+        const data = await response.json();
+        
         document.getElementById('remain').innerText = data.stats.remain;
         document.getElementById('times').innerText = data.stats.times;
         
+        // 渲染家事按鈕
         const itemDiv = document.getElementById('itemContainer');
         itemDiv.innerHTML = "";
         data.items.forEach(item => {
           let btn = document.createElement('div');
-          btn.className = 'item-btn text-center';
+          btn.className = 'item-btn';
           btn.innerHTML = `<div>${item.name}</div><div style="font-size:0.9rem; color:#858796; font-weight:400;">+${item.score}</div>`;
           btn.onclick = function() {
             this.classList.toggle('selected');
-            if(selectedItems.includes(item.name)) selectedItems = selectedItems.filter(i => i!==item.name);
-            else selectedItems.push(item.name);
+            if(selectedItems.includes(item.name)) {
+              selectedItems = selectedItems.filter(i => i !== item.name);
+            } else {
+              selectedItems.push(item.name);
+            }
           };
           itemDiv.appendChild(btn);
         });
 
+        // 渲染紀錄清單
         const logDiv = document.getElementById('logContainer');
         logDiv.innerHTML = "";
         data.logs.forEach(log => {
           let row = document.createElement('div');
           row.className = `log-item ${log.isUsed ? 'strikethrough' : ''}`;
           let pColor = log.isSpend ? 'text-spend' : (log.isUsed ? 'strikethrough' : 'text-gain');
-          row.innerHTML = `<div style="flex:1"><small class="text-muted" style="font-size:0.75rem">${log.date}</small><br><strong style="font-size:1rem">${log.item}</strong></div><div class="${pColor}" style="font-size:1.3rem">${log.points}</div>`;
+          row.innerHTML = `
+            <div style="flex:1">
+              <small class="text-muted" style="font-size:0.75rem">${log.date}</small><br>
+              <strong style="font-size:1rem">${log.item}</strong>
+            </div>
+            <div class="${pColor}" style="font-size:1.3rem">${log.points}</div>
+          `;
           logDiv.appendChild(row);
         });
-        toggleLoading(false);
-      }).getData();
+
+      } catch (error) {
+        console.error(error);
+        alert("資料讀取失敗，請確認 GAS 部署網址正確且權限已設為『任何人』。");
+      }
+      toggleLoading(false);
     }
 
-    function submitJob() {
+    // 送出集點
+    async function submitJob() {
       if(selectedItems.length === 0) return alert("請勾選家事！");
       toggleLoading(true);
-      google.script.run.withSuccessHandler(msg => { alert(msg); selectedItems=[]; init(); }).addRecord(selectedItems, 0);
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ items: selectedItems, spend: 0 })
+        });
+        const result = await response.text();
+        alert(result);
+        selectedItems = [];
+        init();
+      } catch (error) {
+        alert("儲存失敗，請重試");
+      }
+      toggleLoading(false);
     }
 
-    function submitSpend() {
+    // 送出兌換
+    async function submitSpend() {
       if(!confirm("確定兌換嗎？將扣除 5 點。")) return;
       toggleLoading(true);
-      google.script.run.withSuccessHandler(msg => { alert(msg); init(); }).addRecord([], 5);
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ items: [], spend: 5 })
+        });
+        const result = await response.text();
+        alert(result);
+        init();
+      } catch (error) {
+        alert("兌換失敗");
+      }
+      toggleLoading(false);
     }
 
+    // 切換頁籤顯示/隱藏底部按鈕
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('shown.bs.tab', (e) => {
+        document.getElementById('footer-area').style.display = e.target.hash === '#tab-main' ? 'block' : 'none';
+      });
+    });
+
     function toggleLoading(s) { document.getElementById('loading-overlay').style.display = s ? 'flex' : 'none'; }
+    
     window.onload = init;
   </script>
 </body>
