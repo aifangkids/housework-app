@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    :root {
+      --primary: #4e73df;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* 關鍵：強制手機瀏覽器不縮放文字 */
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+    body { 
+      height: 100vh; width: 100vw; margin: 0; padding: 0; 
+      background-color: #f8f9fc; overflow: hidden;
+      display: flex; flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    /* 頂部區域 */
+    .app-header {
+      padding: calc(var(--safe-top) + 20px) 20px 10px 20px;
+      flex-shrink: 0;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, var(--primary) 0%, #224abe 100%);
+      color: white; border-radius: 20px; padding: 25px 15px;
+      box-shadow: 0 4px 15px rgba(78, 115, 223, 0.3);
+    }
+
+    .display-pts { font-size: 2.2rem; font-weight: 800; line-height: 1.2; }
+
+    /* 標籤頁切換按鈕 */
+    .nav-pills .nav-link { font-weight: bold; padding: 10px; border-radius: 50px; }
+    .nav-pills .nav-link.active { background-color: var(--primary); }
+
+    /* 中間滑動內容 */
+    .app-body {
+      flex-grow: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 10px 20px 120px 20px;
+    }
+
+    /* 家事按鈕：大格響應式 */
+    #itemContainer {
+      display: grid;
+      grid-template-columns: 1fr 1fr; /* 強制兩欄，確保按鈕夠大 */
+      gap: 15px; padding: 10px 0;
+    }
+
+    .item-btn {
+      background: white; border: 2px solid #eaecf4; border-radius: 20px;
+      padding: 20px 10px; font-size: 1.1rem; font-weight: 700;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: 0.2s; min-height: 100px;
+    }
+
+    .selected { 
+      background-color: var(--primary) !important; 
+      color: white !important; 
+      border-color: var(--primary) !important;
+      box-shadow: 0 4px 10px rgba(78, 115, 223, 0.4);
+    }
+
+    /* 歷史紀錄明細 */
+    .log-item {
+      padding: 18px 0; border-bottom: 1px solid #e3e6f0;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .strikethrough { text-decoration: line-through; color: #b7b9cc !important; opacity: 0.6; }
+    .text-spend { color: #e74a3b; font-weight: bold; }
+    .text-gain { color: #1cc88a; font-weight: bold; }
+
+    /* 底部固定區域 */
+    .app-footer {
+      position: fixed; bottom: 0; width: 100%;
+      padding: 15px 20px calc(20px + var(--safe-bottom)) 20px;
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+      border-top: 1px solid #e3e6f0; z-index: 1000;
+    }
+
+    .main-btn {
+      width: 100%; border-radius: 50px; padding: 18px;
+      font-weight: 800; font-size: 1.3rem; border: none;
+    }
+
+    #loading-overlay {
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      background: rgba(255,255,255,0.9); z-index:9999;
+      display:none; justify-content:center; align-items:center;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading-overlay"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div></div>
+
+  <div class="app-header">
+    <div class="stat-card text-center">
+      <div class="row g-0">
+        <div class="col">
+          <small class="opacity-75">目前點數</small>
+          <div class="display-pts" id="remain">--</div>
+        </div>
+        <div class="col border-start border-white-25">
+          <small class="opacity-75">可兌換</small>
+          <div class="display-pts" id="times">--</div>
+        </div>
+      </div>
+    </div>
+    
+    <ul class="nav nav-pills nav-fill mt-3 bg-white rounded-pill p-1 shadow-sm">
+      <li class="nav-item"><a class="nav-link active" data-bs-toggle="pill" href="#tab-main">我要集點</a></li>
+      <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#tab-logs">查看明細</a></li>
+    </ul>
+  </div>
+
+  <div class="app-body">
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="tab-main">
+        <div id="itemContainer"></div>
+        <button onclick="submitSpend()" class="btn btn-outline-danger w-100 mt-4 rounded-pill py-3 fw-bold shadow-sm">使用 5 點兌換獎勵</button>
+      </div>
+      <div class="tab-pane fade" id="tab-logs">
+        <div id="logContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-footer" id="footer-btn">
+    <button onclick="submitJob()" class="btn btn-primary main-btn shadow-lg">確認送出並儲存</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let selectedItems = [];
+    
+    // 切換分頁邏輯
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('shown.bs.tab', (e) => {
+        document.getElementById('footer-btn').style.display = e.target.hash === '#tab-main' ? 'block' : 'none';
+      });
+    });
+
+    function init() {
+      toggleLoading(true);
+      google.script.run.withSuccessHandler(data => {
+        document.getElementById('remain').innerText = data.stats.remain;
+        document.getElementById('times').innerText = data.stats.times;
+        
+        const itemDiv = document.getElementById('itemContainer');
+        itemDiv.innerHTML = "";
+        data.items.forEach(item => {
+          let btn = document.createElement('div');
+          btn.className = 'item-btn text-center';
+          btn.innerHTML = `<div>${item.name}</div><div style="font-size:0.9rem; color:#858796; font-weight:400;">+${item.score}</div>`;
+          btn.onclick = function() {
+            this.classList.toggle('selected');
+            if(selectedItems.includes(item.name)) selectedItems = selectedItems.filter(i => i!==item.name);
+            else selectedItems.push(item.name);
+          };
+          itemDiv.appendChild(btn);
+        });
+
+        const logDiv = document.getElementById('logContainer');
+        logDiv.innerHTML = "";
+        data.logs.forEach(log => {
+          let row = document.createElement('div');
+          row.className = `log-item ${log.isUsed ? 'strikethrough' : ''}`;
+          let pColor = log.isSpend ? 'text-spend' : (log.isUsed ? 'strikethrough' : 'text-gain');
+          row.innerHTML = `<div style="flex:1"><small class="text-muted" style="font-size:0.75rem">${log.date}</small><br><strong style="font-size:1rem">${log.item}</strong></div><div class="${pColor}" style="font-size:1.3rem">${log.points}</div>`;
+          logDiv.appendChild(row);
+        });
+        toggleLoading(false);
+      }).getData();
+    }
+
+    function submitJob() {
+      if(selectedItems.length === 0) return alert("請勾選家事！");
+      toggleLoading(true);
+      google.script.run.withSuccessHandler(msg => { alert(msg); selectedItems=[]; init(); }).addRecord(selectedItems, 0);
+    }
+
+    function submitSpend() {
+      if(!confirm("確定兌換嗎？將扣除 5 點。")) return;
+      toggleLoading(true);
+      google.script.run.withSuccessHandler(msg => { alert(msg); init(); }).addRecord([], 5);
+    }
+
+    function toggleLoading(s) { document.getElementById('loading-overlay').style.display = s ? 'flex' : 'none'; }
+    window.onload = init;
+  </script>
+</body>
+</html>
