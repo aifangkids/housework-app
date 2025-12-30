@@ -3,134 +3,130 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>家事集點 App</title>
+  <title>家事戰士集點 App</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <style>
     :root {
-      --primary: #4e73df;
-      --bg: #f8f9fc;
-      --danger: #e74a3b;
-      --success: #1cc88a;
+      --primary: #E6B422; /* 金色 */
+      --bg: #1A1A1B;      /* 深炭黑 */
+      --card-bg: #2F4F4F; /* 深灰藍 */
+      --danger: #FF4500;  /* 火橘紅 */
+      --text: #F5F5DC;    /* 米白 */
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
     body { 
-      height: 100vh; 
-      background-color: var(--bg); 
-      overflow: hidden;
-      display: flex; flex-direction: column; 
+      height: 100vh; background-color: var(--bg); color: var(--text);
+      overflow: hidden; display: flex; flex-direction: column; 
       font-family: system-ui, -apple-system;
     }
 
     .app-header { padding: calc(var(--safe-top) + 20px) 20px 10px 20px; flex-shrink: 0; }
     
     .stat-card {
-      background: linear-gradient(135deg, rgba(78, 115, 223, 1) 0%, rgba(34, 74, 190, 1) 100%);
+      background: linear-gradient(135deg, #8B4513 0%, #B8860B 100%);
       color: white; border-radius: 20px; padding: 20px;
-      box-shadow: 0 4px 15px rgba(78, 115, 223, 0.3);
+      box-shadow: 0 4px 15px rgba(230, 180, 34, 0.3);
     }
+
+    .nav-pills .nav-link { color: var(--text); font-weight: bold; border-radius: 50px; }
+    .nav-pills .nav-link.active { background-color: var(--primary); color: #000; }
 
     .app-body {
       flex-grow: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
       padding: 10px 20px 180px 20px; 
     }
 
+    /* --- 修改後的雙圖片預覽區 --- */
+    .image-preview-container {
+      display: flex; /* 讓圖片並排 */
+      gap: 5px;
+      width: 100%;
+      height: 180px; /* 固定高度比較整齊 */
+      margin-bottom: 15px;
+      background-color: #000;
+      border-radius: 15px;
+      overflow: hidden;
+      border: 1px solid var(--primary);
+    }
+
+    .preview-box {
+      position: relative;
+      flex: 1; /* 平分空間 */
+      overflow: hidden;
+      border-right: 1px solid #333;
+    }
+
+    .preview-box:last-child { border-right: none; }
+
+    .image-preview { 
+      width: 100%; 
+      height: 100%; 
+      object-fit: cover; /* 縮圖填滿視窗 */
+    }
+
+    /* 金色 + 號 (圖片用) */
+    .btn-zoom-gold {
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(230, 180, 34, 0.9);
+      color: #000; border-radius: 50%; width: 30px; height: 30px;
+      display: flex; justify-content: center; align-items: center;
+      font-size: 1.2rem; border: none; font-weight: bold;
+    }
+
+    /* 橘色 + 號 (GIF用) */
+    .btn-zoom-orange {
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(255, 69, 0, 0.9);
+      color: #fff; border-radius: 50%; width: 30px; height: 30px;
+      display: flex; justify-content: center; align-items: center;
+      font-size: 1.2rem; border: none; font-weight: bold;
+    }
+    /* -------------------------- */
+
     #itemContainer { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 10px 0; }
-    
     .item-btn {
-      background: #fff; 
-      border: 2px solid #eaecf4; border-radius: 15px;
-      padding: 15px 5px; font-weight: 700; text-align: center; min-height: 75px;
+      background: var(--card-bg); border: 1px solid var(--primary); border-radius: 15px;
+      color: var(--text); padding: 15px 5px; text-align: center; min-height: 75px;
       display: flex; flex-direction: column; justify-content: center;
     }
-    
-    .selected { background-color: var(--primary) !important; color: white !important; border-color: var(--primary) !important; }
+    .selected { background-color: var(--primary) !important; color: #000 !important; }
 
     .custom-box {
-      background: #fff; border-radius: 15px; 
-      padding: 15px; margin-top: 15px; border: 1px dashed #d1d3e2;
+      background: rgba(47, 79, 79, 0.5); border-radius: 15px; 
+      padding: 15px; margin-top: 15px; border: 1px dashed var(--primary);
     }
+    .form-control { background: #1A1A1B; border: 1px solid #444; color: white; }
+    .form-control:focus { background: #000; color: white; border-color: var(--primary); box-shadow: none; }
 
     .app-footer {
       position: fixed; bottom: 0; width: 100%;
       padding: 15px 15px calc(15px + var(--safe-bottom)) 15px;
-      background: rgba(255, 255, 255, 0.98); 
-      border-top: 1px solid #e3e6f0; z-index: 1000;
+      background: rgba(26, 26, 27, 0.95); border-top: 1px solid var(--primary); z-index: 1000;
     }
-    
     .footer-layout { display: flex; gap: 10px; height: 110px; }
-    .exchange-column { display: flex; flex-direction: column; gap: 4px; width: 95px; }
-    
+    .exchange-column { display: flex; flex-direction: column; gap: 4px; width: 100px; }
     .btn-minus-sm {
-      flex: 1; font-size: 0.7rem; border-radius: 8px; border: 1px solid #ffdada;
-      color: var(--danger); background: white; font-weight: bold;
+      flex: 1; font-size: 0.75rem; border-radius: 8px; border: 1px solid var(--danger);
+      color: var(--danger); background: transparent; font-weight: bold;
     }
-    
     .confirm-column { flex-grow: 1; }
     .main-btn {
       width: 100%; height: 100%; border-radius: 15px; font-weight: 800;
-      border: none; background-color: var(--primary); color: white; font-size: 1.1rem;
+      border: none; background-color: var(--primary); color: #000; font-size: 1.1rem;
     }
 
-    .log-item { 
-      padding: 12px 10px; border-bottom: 1px solid #e3e6f0; 
-      display: flex; justify-content: space-between; 
-      background: #fff;
-    }
-    
-    .strikethrough { text-decoration: line-through; color: #b7b9cc; opacity: 0.6; }
-    #loading-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.8); z-index:9999; display:none; justify-content:center; align-items:center; }
-
-    /* --- 新增圖片顯示樣式 --- */
-    .image-preview-container {
-      position: relative;
-      width: 100%;
-      padding-bottom: 56.25%; /* 16:9 比例 */
-      margin-bottom: 15px;
-      background-color: #f0f0f0;
-      border-radius: 15px;
-      overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .image-preview {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      object-fit: contain; /* 確保圖片不變形，完整顯示 */
-      cursor: pointer;
-    }
-    .image-zoom-btn {
-      position: absolute;
-      top: 10px; right: 10px;
-      background-color: rgba(0,0,0,0.5);
-      color: white;
-      border-radius: 50%;
-      width: 35px; height: 35px;
-      display: flex; justify-content: center; align-items: center;
-      font-size: 1.5rem;
-      cursor: pointer;
-      z-index: 10;
-      border: none;
-    }
-
-    /* Modal 圖片樣式 */
-    .modal-dialog-centered .modal-content {
-      border-radius: 20px;
-    }
-    .modal-img {
-      max-width: 100%;
-      height: auto;
-      display: block;
-      margin: auto;
-      border-radius: 15px;
-    }
+    .log-item { padding: 12px 10px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
+    .strikethrough { text-decoration: line-through; color: #666; opacity: 0.5; }
+    #loading-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index:9999; display:none; justify-content:center; align-items:center; }
   </style>
 </head>
 <body>
-  <div id="loading-overlay"><div class="spinner-border text-primary"></div></div>
+  <div id="loading-overlay"><div class="spinner-border text-warning"></div></div>
 
   <div class="app-header">
     <div class="stat-card text-center">
@@ -139,9 +135,9 @@
         <div class="col border-start border-white-25"><small>可兌換</small><div class="h3 fw-bold" id="times">--</div></div>
       </div>
     </div>
-    <ul class="nav nav-pills nav-fill mt-3 bg-white rounded-pill p-1 shadow-sm">
-      <li class="nav-item"><a class="nav-link active rounded-pill" data-bs-toggle="pill" href="#tab-main">我要紀錄</a></li>
-      <li class="nav-item"><a class="nav-link rounded-pill" data-bs-toggle="pill" href="#tab-logs">查看明細</a></li>
+    <ul class="nav nav-pills nav-fill mt-3 bg-dark rounded-pill p-1 shadow-sm">
+      <li class="nav-item"><button class="nav-link active rounded-pill" data-bs-toggle="pill" data-bs-target="#tab-main">我要紀錄</button></li>
+      <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#tab-logs">查看明細</button></li>
     </ul>
   </div>
 
@@ -150,51 +146,66 @@
       <div class="tab-pane fade show active" id="tab-main">
         
         <div class="image-preview-container">
-          <img src="rose.png" class="image-preview" alt="Rose Image">
-          <button class="image-zoom-btn" data-bs-toggle="modal" data-bs-target="#imageModal">+</button>
+          <div class="preview-box">
+            <img src="rose.png" class="image-preview">
+            <button class="btn-zoom-gold" data-bs-toggle="modal" data-bs-target="#imageModal">+</button>
+          </div>
+          <div class="preview-box">
+            <img src="motion.gif" class="image-preview">
+            <button class="btn-zoom-orange" data-bs-toggle="modal" data-bs-target="#gifModal">+</button>
+          </div>
         </div>
+
         <div id="itemContainer"></div>
         <div class="custom-box">
           <div class="row g-2">
-            <div class="col-8"><input type="text" id="custom-name" class="form-control form-control-sm" placeholder="自訂項目名稱"></div>
-            <div class="col-4"><input type="number" id="custom-score" class="form-control form-control-sm" placeholder="點數"></div>
-            <div class="col-12"><button onclick="submitCustom()" class="btn btn-outline-primary btn-sm w-100 fw-bold">送出自定義內容</button></div>
+            <div class="col-8"><input type="text" id="custom-name" class="form-control" placeholder="自訂項目"></div>
+            <div class="col-4"><input type="number" id="custom-score" class="form-control" placeholder="點數"></div>
+            <div class="col-12"><button onclick="submitCustom()" class="btn btn-outline-warning btn-sm w-100 fw-bold">送出自定義項目</button></div>
           </div>
         </div>
       </div>
-      <div class="tab-pane fade" id="tab-logs"><div id="logContainer"></div></div>
+      <div class="tab-pane fade" id="tab-logs">
+        <div id="logContainer"></div>
+      </div>
     </div>
   </div>
 
   <div class="app-footer" id="footer-area">
     <div class="footer-layout">
       <div class="exchange-column">
-        <button onclick="submitAction([], 10)" class="btn-minus-sm">-10 點(1h)</button>
-        <button onclick="submitAction([], 20)" class="btn-minus-sm">-20 點(2h)</button>
-        <button onclick="submitAction([], 30)" class="btn-minus-sm">-30 點(3h)</button>
+        <button onclick="submitAction([], 10)" class="btn-minus-sm">-10 點<br>1 小時</button>
+        <button onclick="submitAction([], 20)" class="btn-minus-sm">-20 點<br>2 小時</button>
+        <button onclick="submitAction([], 30)" class="btn-minus-sm">-30 點<br>3 小時</button>
       </div>
       <div class="confirm-column">
-        <button onclick="submitJob()" class="main-btn shadow-sm">確認送出<br>勾選項目</button>
+        <button onclick="submitJob()" class="main-btn">確認送出<br>勾選項目</button>
       </div>
     </div>
   </div>
 
-  <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="imageModalLabel">大圖預覽</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body text-center">
-          <img src="rose.png" class="modal-img" alt="Rose Image Full">
+  <div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark border-warning">
+        <div class="modal-body p-0 text-center">
+          <img src="rose.png" style="width:100%; border-radius:15px;">
         </div>
       </div>
     </div>
   </div>
+
+  <div class="modal fade" id="gifModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark border-danger">
+        <div class="modal-body p-0 text-center">
+          <img src="motion.gif" style="width:100%; border-radius:15px;">
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // ⚠️ 請修改此處網址
     const GAS_URL = "https://script.google.com/macros/s/AKfycby17zU7qAexO5aCw4rH17yAAZd7gcJUvI6RJJFzfZhBFtanxVK08qwM-2V-T02VGR9Y/exec";
     let selectedItems = [];
 
@@ -209,15 +220,15 @@
         const itemDiv = document.getElementById('itemContainer');
         itemDiv.innerHTML = data.items.map(item => `
           <div class="item-btn" onclick="toggleItem(this, '${item.name}')">
-            <div>${item.name}</div><div style="font-size:0.8rem; color:#858796;">+${item.score}</div>
+            <div>${item.name}</div><div style="font-size:0.8rem; color:var(--primary);">+${item.score}</div>
           </div>`).join('');
 
         document.getElementById('logContainer').innerHTML = data.logs.map(log => `
           <div class="log-item ${log.isUsed ? 'strikethrough' : ''}">
             <div style="flex:1"><small class="text-muted">${log.date}</small><br><strong>${log.item}</strong></div>
-            <div class="${log.isSpend ? 'text-danger' : 'text-success'} fw-bold">${log.points}</div>
+            <div class="${log.isSpend ? 'text-danger' : 'text-warning'} fw-bold">${log.points}</div>
           </div>`).join('');
-      } catch (e) { alert("讀取失敗"); }
+      } catch (e) { console.error(e); }
       toggleLoading(false);
     }
 
@@ -238,12 +249,11 @@
       toggleLoading(false);
     }
 
-    function submitJob() { if(selectedItems.length) submitAction(selectedItems, 0); else alert("請勾選項目"); }
+    function submitJob() { if(selectedItems.length) submitAction(selectedItems, 0); else alert("請先勾選項目"); }
     function submitCustom() {
       const n = document.getElementById('custom-name').value;
       const s = document.getElementById('custom-score').value;
-      if(n && s) { submitAction([n], 0, parseInt(s)); document.getElementById('custom-name').value=""; document.getElementById('custom-score').value=""; }
-      else alert("請填寫內容");
+      if(n && s) { submitAction([n], 0, parseInt(s)); } else alert("請填寫完整");
     }
 
     function toggleLoading(s) { document.getElementById('loading-overlay').style.display = s ? 'flex' : 'none'; }
