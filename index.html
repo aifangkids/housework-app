@@ -1,93 +1,221 @@
-<style>
-  /* 左右分欄佈局 */
-  .action-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* 左右對半分 */
-    gap: 15px;
-    margin-top: 10px;
-  }
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>家事集點 App</title>
   
-  .side-title {
-    font-size: 0.9rem; font-weight: bold; color: #5a5c69;
-    margin-bottom: 10px; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 5px;
-  }
-
-  /* 調整按鈕大小以適應分欄 */
-  .item-btn {
-    background: white; border: 2px solid #eaecf4; border-radius: 15px;
-    padding: 12px 5px; font-size: 0.95rem; font-weight: 700;
-    margin-bottom: 10px; text-align: center;
-  }
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
   
-  .btn-exchange { border-color: #e74a3b; color: #e74a3b; } /* 扣點紅 */
-  .btn-gain { border-color: #1cc88a; color: #1cc88a; }     /* 新增綠 */
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    :root {
+      --primary: #4e73df;
+      --bg: #f8f9fc;
+      --danger: #e74a3b;
+      --success: #1cc88a;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
 
-  /* 自定義輸入區 */
-  .custom-input-box {
-    background: #fff; border-radius: 15px; padding: 10px;
-    border: 1px dashed var(--primary); margin-top: 10px;
-  }
-  .custom-input-box input {
-    font-size: 0.9rem; margin-bottom: 5px;
-  }
-</style>
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
 
-<div class="app-body">
-  <div class="tab-content">
-    <div class="tab-pane fade show active" id="tab-main">
-      
-      <div class="action-container">
-        <div class="side-exchange">
-          <div class="side-title text-danger">兌換 (每10點/1hr)</div>
-          <div onclick="submitSpend(10)" class="item-btn btn-exchange">-10 點<br><small>1 小時</small></div>
-          <div onclick="submitSpend(20)" class="item-btn btn-exchange">-20 點<br><small>2 小時</small></div>
-          <div onclick="submitSpend(30)" class="item-btn btn-exchange">-30 點<br><small>3 小時</small></div>
-        </div>
+    body { 
+      height: 100vh; width: 100vw; margin: 0; padding: 0; 
+      background-color: var(--bg); overflow: hidden;
+      display: flex; flex-direction: column;
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto;
+      user-select: none; -webkit-user-select: none;
+    }
 
-        <div class="side-gain">
-          <div class="side-title text-success">集點項目</div>
-          <div id="itemContainer"></div>
-          
-          <div class="custom-input-box">
-            <small class="text-muted">自訂項目</small>
-            <input type="text" id="custom-name" class="form-control form-control-sm" placeholder="內容">
-            <input type="number" id="custom-score" class="form-control form-control-sm" placeholder="點數">
-            <button onclick="addCustomRecord()" class="btn btn-success btn-sm w-100 mt-1">手動新增</button>
+    .app-header { padding: calc(var(--safe-top) + 20px) 20px 10px 20px; flex-shrink: 0; }
+    .stat-card {
+      background: linear-gradient(135deg, var(--primary) 0%, #224abe 100%);
+      color: white; border-radius: 20px; padding: 25px 15px;
+      box-shadow: 0 4px 15px rgba(78, 115, 223, 0.3);
+    }
+    .display-pts { font-size: 2.2rem; font-weight: 800; line-height: 1.2; }
+
+    .app-body {
+      flex-grow: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 10px 20px 130px 20px;
+    }
+
+    /* 左右分欄佈局 */
+    .dual-pane { display: flex; gap: 10px; margin-top: 10px; }
+    .pane-left, .pane-right { flex: 1; }
+    .pane-title { font-size: 0.85rem; font-weight: 800; text-align: center; margin-bottom: 8px; color: #5a5c69; }
+
+    /* 按鈕樣式調整 */
+    .item-btn {
+      background: white; border: 2px solid #eaecf4; border-radius: 15px;
+      padding: 15px 5px; font-size: 0.95rem; font-weight: 700;
+      margin-bottom: 10px; text-align: center; min-height: 70px;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .btn-minus { border-color: #ffdada; color: var(--danger); }
+    .btn-plus { border-color: #d1f7e8; color: var(--success); }
+
+    .selected { 
+      background-color: var(--primary) !important; 
+      color: white !important; 
+      border-color: var(--primary) !important;
+    }
+
+    /* 自定義區域 */
+    .custom-box {
+      background: white; border-radius: 15px; padding: 15px;
+      margin-top: 10px; border: 1px dashed #d1d3e2;
+    }
+
+    .log-item { padding: 15px 0; border-bottom: 1px solid #e3e6f0; display: flex; justify-content: space-between; align-items: center; }
+    .strikethrough { text-decoration: line-through; color: #b7b9cc !important; opacity: 0.6; }
+    .text-spend { color: var(--danger); font-weight: bold; }
+    .text-gain { color: var(--success); font-weight: bold; }
+
+    .app-footer {
+      position: fixed; bottom: 0; width: 100%;
+      padding: 15px 20px calc(20px + var(--safe-bottom)) 20px;
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+      border-top: 1px solid #e3e6f0; z-index: 1000;
+    }
+
+    .main-btn { width: 100%; border-radius: 50px; padding: 18px; font-weight: 800; font-size: 1.3rem; border: none; background-color: var(--primary); color: white; }
+
+    #loading-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.9); z-index:9999; display:none; justify-content:center; align-items:center; }
+  </style>
+</head>
+<body>
+  <div id="loading-overlay"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div></div>
+
+  <div class="app-header">
+    <div class="stat-card text-center">
+      <div class="row g-0">
+        <div class="col"><small class="opacity-75">目前點數</small><div class="display-pts" id="remain">--</div></div>
+        <div class="col border-start border-white-25"><small class="opacity-75">可兌換</small><div class="display-pts" id="times">--</div></div>
+      </div>
+    </div>
+    <ul class="nav nav-pills nav-fill mt-3 bg-white rounded-pill p-1 shadow-sm">
+      <li class="nav-item"><a class="nav-link active rounded-pill" data-bs-toggle="pill" href="#tab-main">我要紀錄</a></li>
+      <li class="nav-item"><a class="nav-link rounded-pill" data-bs-toggle="pill" href="#tab-logs">查看明細</a></li>
+    </ul>
+  </div>
+
+  <div class="app-body">
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="tab-main">
+        
+        <div class="dual-pane">
+          <div class="pane-left">
+            <div class="pane-title text-danger">扣點 (兌換)</div>
+            <div onclick="submitAction([], 10)" class="item-btn btn-minus">-10 點<br><small>1 小時</small></div>
+            <div onclick="submitAction([], 20)" class="item-btn btn-minus">-20 點<br><small>2 小時</small></div>
+            <div onclick="submitAction([], 30)" class="item-btn btn-minus">-30 點<br><small>3 小時</small></div>
+          </div>
+
+          <div class="pane-right">
+            <div class="pane-title text-success">新增 (集點)</div>
+            <div id="itemContainer"></div>
           </div>
         </div>
+
+        <div class="custom-box shadow-sm">
+          <div class="pane-title" style="text-align:left">手動輸入自定義內容</div>
+          <div class="row g-2">
+            <div class="col-8"><input type="text" id="custom-name" class="form-control" placeholder="做什麼事?"></div>
+            <div class="col-4"><input type="number" id="custom-score" class="form-control" placeholder="點數"></div>
+            <div class="col-12"><button onclick="submitCustom()" class="btn btn-outline-primary w-100 fw-bold">送出自定義項目</button></div>
+          </div>
+        </div>
+
       </div>
-
+      <div class="tab-pane fade" id="tab-logs"><div id="logContainer"></div></div>
     </div>
-    </div>
-</div>
+  </div>
 
-<script>
-  // 新增：處理自定義輸入
-  async function addCustomRecord() {
-    const name = document.getElementById('custom-name').value;
-    const score = parseInt(document.getElementById('custom-score').value);
-    if(!name || !score) return alert("請輸入完整內容與點數");
-    
-    toggleLoading(true);
-    await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ items: [name], score: score, spend: 0 })
-    });
-    document.getElementById('custom-name').value = '';
-    document.getElementById('custom-score').value = '';
-    init();
-    toggleLoading(false);
-  }
+  <div class="app-footer" id="footer-area">
+    <button onclick="submitJob()" class="btn btn-primary main-btn shadow-lg">確認送出勾選項目</button>
+  </div>
 
-  // 修改：處理不同額度的扣點
-  async function submitSpend(amount) {
-    if(!confirm(`確認扣除 ${amount} 點 (兌換 ${amount/10} 小時) 嗎？`)) return;
-    toggleLoading(true);
-    await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ items: [], spend: amount })
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const GAS_URL = "您的GAS網址";
+    let selectedItems = [];
+
+    async function init() {
+      toggleLoading(true);
+      try {
+        const response = await fetch(GAS_URL);
+        const data = await response.json();
+        document.getElementById('remain').innerText = data.stats.remain;
+        document.getElementById('times').innerText = data.stats.times;
+        
+        const itemDiv = document.getElementById('itemContainer');
+        itemDiv.innerHTML = "";
+        data.items.forEach(item => {
+          let btn = document.createElement('div');
+          btn.className = 'item-btn btn-plus';
+          btn.innerHTML = `<div>${item.name}</div><div style="font-size:0.8rem; opacity:0.7;">+${item.score}</div>`;
+          btn.onclick = function() {
+            this.classList.toggle('selected');
+            if(selectedItems.includes(item.name)) selectedItems = selectedItems.filter(i => i !== item.name);
+            else selectedItems.push(item.name);
+          };
+          itemDiv.appendChild(btn);
+        });
+
+        const logDiv = document.getElementById('logContainer');
+        logDiv.innerHTML = "";
+        data.logs.forEach(log => {
+          let row = document.createElement('div');
+          row.className = `log-item ${log.isUsed ? 'strikethrough' : ''}`;
+          row.innerHTML = `<div style="flex:1"><small class="text-muted">${log.date}</small><br><strong>${log.item}</strong></div><div class="${log.isSpend ? 'text-spend' : 'text-gain'}">${log.points}</div>`;
+          logDiv.appendChild(row);
+        });
+      } catch (e) { alert("讀取失敗"); }
+      toggleLoading(false);
+    }
+
+    // 通用提交函數
+    async function submitAction(items, spend, customScore) {
+      toggleLoading(true);
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ items, spend, customScore })
+        });
+        const result = await response.text();
+        alert(result);
+        selectedItems = [];
+        init();
+      } catch (e) { alert("失敗"); }
+      toggleLoading(false);
+    }
+
+    function submitJob() {
+      if(selectedItems.length === 0) return alert("請勾選！");
+      submitAction(selectedItems, 0);
+    }
+
+    function submitCustom() {
+      const name = document.getElementById('custom-name').value;
+      const score = document.getElementById('custom-score').value;
+      if(!name || !score) return alert("請填寫自定義內容與點數");
+      submitAction([name], 0, parseInt(score));
+      document.getElementById('custom-name').value = "";
+      document.getElementById('custom-score').value = "";
+    }
+
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('shown.bs.tab', (e) => {
+        document.getElementById('footer-area').style.display = e.target.hash === '#tab-main' ? 'block' : 'none';
+      });
     });
-    init();
-    toggleLoading(false);
-  }
-</script>
+
+    function toggleLoading(s) { document.getElementById('loading-overlay').style.display = s ? 'flex' : 'none'; }
+    window.onload = init;
+  </script>
+</body>
+</html>
